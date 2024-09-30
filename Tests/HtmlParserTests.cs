@@ -24,8 +24,7 @@ public class HtmlParserTests
                 .Respond("text/html", expectedHtml);
 
         var client = mockHttp.ToHttpClient();
-
-        var parser = new HtmlParser(client);
+        IHtmlParser parser = new HtmlParser(client);
 
         // Act
         var result = await parser.GetHtmlContentAsync(url);

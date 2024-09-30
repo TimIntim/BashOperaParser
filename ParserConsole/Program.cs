@@ -11,7 +11,7 @@ internal static class Program
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         
         var client = CreateHttpClient();
-        var parser = new HtmlParser(client);
+        IHtmlParser parser = new HtmlParser(client);
         try
         {
             var htmlContent = await parser.GetHtmlContentAsync("https://www.bashopera.ru/affiche/");
@@ -48,3 +48,14 @@ internal static class Program
         return new HttpClient(resilienceHandler);
     }
 }
+
+internal record Performance(string Name, IReadOnlyCollection<Tag> Tags);
+internal record Tag(string Name);
+
+internal enum Venue
+{
+    LargeHall,
+    SmallHall,
+}
+
+internal record Show (Performance Performance, DateTime ShowTime, Venue Location);
