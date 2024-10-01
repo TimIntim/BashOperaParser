@@ -3,7 +3,7 @@
 /// <summary>
 /// Html-парсер
 /// </summary>
-public interface IHtmlParser
+public interface IHtmlContentFetcher
 {
     /// <summary>
     /// Возвращает контент страницы по его url-у.

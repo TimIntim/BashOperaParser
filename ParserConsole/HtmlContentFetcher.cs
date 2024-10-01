@@ -2,7 +2,7 @@
 
 namespace ParserConsole;
 
-public class HtmlParser(HttpClient client) : IHtmlParser
+public class HtmlContentFetcher(HttpClient client) : IHtmlContentFetcher
 {
     public async Task<string> GetHtmlContentAsync(string url)
     {

@@ -11,10 +11,14 @@ internal static class Program
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         
         var client = CreateHttpClient();
-        IHtmlParser parser = new HtmlParser(client);
+        IHtmlContentFetcher contentFetcher = new HtmlContentFetcher(client);
         try
         {
-            var htmlContent = await parser.GetHtmlContentAsync("https://www.bashopera.ru/affiche/");
+            var htmlContent = await contentFetcher.GetHtmlContentAsync("https://www.bashopera.ru/affiche/");
+            
+            IPlaybillParser parser = new PlaybillParser();
+            IReadOnlyCollection<Show> shows = parser.ParseShows(htmlContent);
+            
             Console.WriteLine(htmlContent);
         }
         catch (Exception e)
@@ -49,13 +53,11 @@ internal static class Program
     }
 }
 
-internal record Performance(string Name, IReadOnlyCollection<Tag> Tags);
-internal record Tag(string Name);
-
-internal enum Venue
+internal interface IPlaybillParser
 {
-    LargeHall,
-    SmallHall,
+    IReadOnlyCollection<Show> ParseShows(string htmlContent);
 }
 
-internal record Show (Performance Performance, DateTime ShowTime, Venue Location);
+internal record Performance(string Name);
+
+internal record Show (Performance Performance, DateTime ShowTime, string Location);

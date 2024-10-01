@@ -5,9 +5,9 @@ using RichardSzalay.MockHttp;
 
 namespace Tests;
 
-public class HtmlParserTests
+public class HtmlContentFetcherTests
 {
-    public HtmlParserTests()
+    public HtmlContentFetcherTests()
     {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
     }
@@ -24,10 +24,10 @@ public class HtmlParserTests
                 .Respond("text/html", expectedHtml);
 
         var client = mockHttp.ToHttpClient();
-        IHtmlParser parser = new HtmlParser(client);
+        IHtmlContentFetcher contentFetcher = new HtmlContentFetcher(client);
 
         // Act
-        var result = await parser.GetHtmlContentAsync(url);
+        var result = await contentFetcher.GetHtmlContentAsync(url);
 
         // Assert
         result.Should().Be(expectedHtml);
