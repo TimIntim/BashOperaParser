@@ -17,7 +17,7 @@ internal static class Program
             var htmlContent = await contentFetcher.GetHtmlContentAsync("https://www.bashopera.ru/affiche/");
             
             IPlaybillParser parser = new PlaybillParser();
-            IReadOnlyCollection<Show> shows = parser.ParseShows(htmlContent);
+            var shows = parser.ParseShows(htmlContent);
             
             Console.WriteLine(htmlContent);
         }

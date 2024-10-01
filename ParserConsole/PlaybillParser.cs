@@ -61,7 +61,7 @@ internal class PlaybillParser : IPlaybillParser
             return null;
         }
 
-        if (!DateTime.TryParseExact(timeText?.Replace(" ", ""), timeFormat, 
+        if (!DateTime.TryParseExact(timeText.Replace(" ", ""), timeFormat, 
                 CultureInfo.InvariantCulture, 
                 DateTimeStyles.None, 
                 out var parsedTime))
