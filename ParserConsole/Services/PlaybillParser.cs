@@ -4,7 +4,7 @@ using ParserConsole.Services.Interfaces;
 
 namespace ParserConsole.Services;
 
-internal class PlaybillParser : IPlaybillParser
+public class PlaybillParser : IPlaybillParser
 {
     public IReadOnlyCollection<Show> ParseShows(string htmlContent)
     {
@@ -26,8 +26,7 @@ internal class PlaybillParser : IPlaybillParser
             var dateText = dateNode?.InnerText.Trim();
             var timeText = venueNode?.NextSibling.InnerText.Replace(",", "").Trim();
             var showTime = TryParseShowDateTime(dateText, timeText);
-
-
+            
             if (string.IsNullOrWhiteSpace(performanceName) ||
                 string.IsNullOrWhiteSpace(venueName) ||
                 showTime is null)
@@ -70,6 +69,6 @@ internal class PlaybillParser : IPlaybillParser
             return null;
         }
 
-        return new DateTime(parsedDate.Year, parsedDate.Month, parsedDate.Day, parsedTime.Hour, parsedTime.Minute, 0);
+        return new DateTime(parsedDate.Year, parsedDate.Month, parsedDate.Day, parsedTime.Hour, parsedTime.Minute, 0, DateTimeKind.Local);
     }
 }

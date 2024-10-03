@@ -1,0 +1,16 @@
+﻿[
+  {
+    Performance: {
+      Name: Северные амуры (концертное исполнение)
+    },
+    ShowTime: DateTime_1,
+    Location: Большой зал
+  },
+  {
+    Performance: {
+      Name: Весёлая вдова
+    },
+    ShowTime: DateTime_2,
+    Location: Большой зал
+  }
+]

@@ -21,7 +21,7 @@ internal static class Program
             IPlaybillParser parser = new PlaybillParser();
             var shows = parser.ParseShows(htmlContent);
             
-            Console.WriteLine(htmlContent);
+            Console.WriteLine(shows);
         }
         catch (Exception e)
         {
@@ -54,7 +54,3 @@ internal static class Program
         return new HttpClient(resilienceHandler);
     }
 }
-
-internal record Performance(string Name);
-
-internal record Show (Performance Performance, DateTime ShowTime, string Location);
