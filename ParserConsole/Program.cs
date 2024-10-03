@@ -1,5 +1,7 @@
 ﻿using System.Text;
 using Microsoft.Extensions.Http.Resilience;
+using ParserConsole.Services;
+using ParserConsole.Services.Interfaces;
 using Polly;
 
 namespace ParserConsole;
@@ -51,11 +53,6 @@ internal static class Program
 
         return new HttpClient(resilienceHandler);
     }
-}
-
-internal interface IPlaybillParser
-{
-    IReadOnlyCollection<Show> ParseShows(string htmlContent);
 }
 
 internal record Performance(string Name);

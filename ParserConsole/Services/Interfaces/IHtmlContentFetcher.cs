@@ -1,4 +1,4 @@
-﻿namespace ParserConsole;
+﻿namespace ParserConsole.Services.Interfaces;
 
 /// <summary>
 /// Html-парсер

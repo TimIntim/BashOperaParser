@@ -1,7 +1,8 @@
 ﻿using System.Globalization;
 using HtmlAgilityPack;
+using ParserConsole.Services.Interfaces;
 
-namespace ParserConsole;
+namespace ParserConsole.Services;
 
 internal class PlaybillParser : IPlaybillParser
 {
