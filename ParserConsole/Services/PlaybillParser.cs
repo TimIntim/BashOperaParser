@@ -48,12 +48,10 @@ public class PlaybillParser : IPlaybillParser
         if (string.IsNullOrWhiteSpace(dateText) || string.IsNullOrWhiteSpace(timeText))
             return null;
         
-        // Формат даты: 4 октября
-        // Формат времени: 19:00 (без пробелов)
-        var dateFormat = "d MMMM";
-        var timeFormat = "HH:mm";
+        // Формат даты: 4 октября 19:00
+        const string DATE_FORMAT = "d MMMM HH:mm";
 
-        if (!DateTime.TryParseExact(dateText, dateFormat, 
+        if (!DateTime.TryParseExact($"{dateText} {timeText}", DATE_FORMAT, 
                 new CultureInfo("ru-RU"), 
                 DateTimeStyles.None, 
                 out var parsedDate))
@@ -61,14 +59,6 @@ public class PlaybillParser : IPlaybillParser
             return null;
         }
 
-        if (!DateTime.TryParseExact(timeText.Replace(" ", ""), timeFormat, 
-                CultureInfo.InvariantCulture, 
-                DateTimeStyles.None, 
-                out var parsedTime))
-        {
-            return null;
-        }
-
-        return new DateTime(parsedDate.Year, parsedDate.Month, parsedDate.Day, parsedTime.Hour, parsedTime.Minute, 0, DateTimeKind.Local);
+        return parsedDate;
     }
 }
