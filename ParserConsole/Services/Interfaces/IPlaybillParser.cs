@@ -1,4 +1,6 @@
-﻿namespace ParserConsole.Services.Interfaces;
+﻿using JetBrains.Annotations;
+namespace ParserConsole.Services.Interfaces;
+
 
 /// <summary>
 /// Парсер афиши.
@@ -10,7 +12,7 @@ public interface IPlaybillParser
     /// </summary>
     /// <param name="htmlContent">Html-контент афиши.</param>
     /// <returns>Коллекция спектаклей со местом и временем показа.</returns>
-    IReadOnlyCollection<Show> ParseShows(string htmlContent);
+    IReadOnlyCollection<ShowDto> ParseShows(string htmlContent);
 }
 
 
@@ -18,12 +20,15 @@ public interface IPlaybillParser
 /// Спектакль.
 /// </summary>
 /// <param name="Name">Название спектакля.</param>
-public record Performance(string Name);
+public record PerformanceDto([UsedImplicitly] string Name);
 
 /// <summary>
 /// Представление (сеанс показа спектакля).
 /// </summary>
-/// <param name="Performance">Спектакль, который будет показан.</param>
+/// <param name="PerformanceDto">Спектакль, который будет показан.</param>
 /// <param name="ShowTime">Дата и время начала представления.</param>
 /// <param name="Location">Место проведения представления.</param>
-public record Show (Performance Performance, DateTime ShowTime, string Location);
+public record ShowDto (
+    [UsedImplicitly] PerformanceDto PerformanceDto, 
+    [UsedImplicitly] DateTime ShowTime, 
+    [UsedImplicitly] string Location);

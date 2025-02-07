@@ -1,7 +1,7 @@
 ﻿using System.Runtime.CompilerServices;
 using IOPath = System.IO.Path;
 
-namespace VerifyTests;
+namespace Tests;
 
 public static class CurrentFile
 {

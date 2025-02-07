@@ -6,13 +6,13 @@ namespace ParserConsole.Services;
 
 public class PlaybillParser : IPlaybillParser
 {
-    public IReadOnlyCollection<Show> ParseShows(string htmlContent)
+    public IReadOnlyCollection<ShowDto> ParseShows(string htmlContent)
     {
         var htmlDoc = new HtmlDocument();
         htmlDoc.LoadHtml(htmlContent);
         
         var showNodes = htmlDoc.DocumentNode.SelectNodes("//div[contains(@class, 'item content')]");
-        var shows = new List<Show>();
+        var shows = new List<ShowDto>();
         
         foreach (var showNode in showNodes)
         {
@@ -35,8 +35,8 @@ public class PlaybillParser : IPlaybillParser
                 continue;
             }
             
-            var performance = new Performance(performanceName);
-            var show = new Show(performance, showTime.Value, venueName);
+            var performance = new PerformanceDto(Name: performanceName);
+            var show = new ShowDto(performance, showTime.Value, venueName);
             shows.Add(show);
         }
 
@@ -49,9 +49,9 @@ public class PlaybillParser : IPlaybillParser
             return null;
         
         // Формат даты: 4 октября 19:00
-        const string DATE_FORMAT = "d MMMM HH:mm";
+        const string dateFormat = "d MMMM HH:mm";
 
-        if (!DateTime.TryParseExact($"{dateText} {timeText}", DATE_FORMAT, 
+        if (!DateTime.TryParseExact($"{dateText} {timeText}", dateFormat, 
                 new CultureInfo("ru-RU"), 
                 DateTimeStyles.None, 
                 out var parsedDate))

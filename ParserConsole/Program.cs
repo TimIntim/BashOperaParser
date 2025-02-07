@@ -11,22 +11,41 @@ internal static class Program
     static async Task Main()
     {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-        
+
         var client = CreateHttpClient();
         IHtmlContentFetcher contentFetcher = new HtmlContentFetcher(client);
         try
         {
             var htmlContent = await contentFetcher.GetHtmlContentAsync("https://www.bashopera.ru/affiche/");
-            
+
             IPlaybillParser parser = new PlaybillParser();
             var shows = parser.ParseShows(htmlContent);
-            
-            Console.WriteLine(shows);
+
+            await SaveShowsInDatabase(shows);
         }
         catch (Exception e)
         {
             Console.WriteLine($"Ошибка: {e.Message}");
         }
+    }
+
+    private static async Task SaveShowsInDatabase(IReadOnlyCollection<ShowDto> shows)
+    {
+        await using var context = new BashOperaDbContext();
+
+        var showEntities = new List<Show>();
+        foreach (var show in shows)
+        {
+            var showEntity = new Show()
+            {
+                Performance = new Performance() { Name = show.PerformanceDto.Name },
+                ShowTime = DateTime.SpecifyKind(show.ShowTime, DateTimeKind.Utc),
+                Location = show.Location
+            };
+            showEntities.Add(showEntity);
+        }
+        context.UpdateRange(showEntities);
+        await context.SaveChangesAsync();
     }
 
     // TODO когда дойду до переделки проекта под нормальный с DI - лучше использовать IHttpClientFactory
