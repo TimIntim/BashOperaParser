@@ -21,12 +21,12 @@ internal static class Program
             IPlaybillParser parser = new PlaybillParser();
             var parsedShows = parser.ParseShows(htmlContent);
 
-            IRepository repository = new Repository();
+            IShowRepository showRepository = new ShowRepository();
             var cancellationToken = new CancellationTokenSource().Token;
             // TODO не эффективно тянуть все записи из БД. Лучше в БД маленькую пачку и возвращать из них ту часть, которой нет в БД.
-            var existingShows = await repository.GetAll(cancellationToken);
+            var existingShows = await showRepository.GetAll(cancellationToken);
             var newShows = DetectNewShows(parsedShows, existingShows);
-            await repository.AddRange(newShows, cancellationToken);
+            await showRepository.AddRange(newShows, cancellationToken);
         }
         catch (Exception e)
         {
