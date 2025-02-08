@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using Microsoft.Extensions.Http.Resilience;
+using ParserConsole.Repositories;
 using ParserConsole.Services;
 using ParserConsole.Services.Interfaces;
 using Polly;

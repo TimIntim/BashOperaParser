@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
-namespace ParserConsole;
+namespace ParserConsole.Repositories;
 
 public class PerformanceRepository : IPerformanceRepository
 {

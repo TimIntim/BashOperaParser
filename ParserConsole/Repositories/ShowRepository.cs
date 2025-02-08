@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using ParserConsole.Services.Interfaces;
 
-namespace ParserConsole;
+namespace ParserConsole.Repositories;
 
 public interface IShowRepository
 {
