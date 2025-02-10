@@ -6,19 +6,17 @@ namespace ParserConsole;
 
 public sealed class BashOperaDbContext : DbContext
 {
+    public BashOperaDbContext(DbContextOptions<BashOperaDbContext> options) : base(options)
+    {
+        Database.EnsureCreated();
+    }
+    
     public DbSet<Show> Shows { get; set; }
     public DbSet<Performance> Performances { get; set; }
     
     public BashOperaDbContext()
     {
         Database.EnsureCreated();
-    }
-    
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    {
-        optionsBuilder
-            .UseNpgsql("Host=localhost;Port=5432;Database=bash_opera_db;Username=postgres;Password=postgres")
-            .UseSnakeCaseNamingConvention();
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

@@ -11,22 +11,25 @@ public interface IShowRepository
 
 public class ShowRepository : IShowRepository
 {
+    private readonly BashOperaDbContext _context;
+
+    public ShowRepository(BashOperaDbContext context)
+    {
+        _context = context;
+    }
+
     public async Task<IReadOnlyCollection<Show>> GetAll(CancellationToken cancellationToken)
     {
-        await using var context = new BashOperaDbContext();
-
-        return await context.Shows
+        return await _context.Shows
             .Include(x => x.Performance)
             .ToListAsync(cancellationToken);
     }
 
     public async Task AddRange(IReadOnlyCollection<ShowDto> shows, CancellationToken cancellationToken)
     {
-        await using var context = new BashOperaDbContext();
-        
         var showEntities = new List<Show>();
         var performances = new Dictionary<string, Performance>();
-        var performanceRepository = new PerformanceRepository();
+        var performanceRepository = new PerformanceRepository(_context);
         foreach (var show in shows)
         {
             if (!performances.TryGetValue(show.PerformanceDto.Name, out var performance))
@@ -49,7 +52,7 @@ public class ShowRepository : IShowRepository
             };
             showEntities.Add(showEntity);
         }
-        context.UpdateRange(showEntities);
-        await context.SaveChangesAsync(cancellationToken);
+        _context.UpdateRange(showEntities);
+        await _context.SaveChangesAsync(cancellationToken);
     }
 }

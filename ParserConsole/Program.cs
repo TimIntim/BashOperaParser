@@ -1,4 +1,8 @@
 ﻿using System.Text;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Http.Resilience;
 using ParserConsole.Repositories;
 using ParserConsole.Services;
@@ -7,11 +11,15 @@ using Polly;
 
 namespace ParserConsole;
 
-internal static class Program
+internal class Program
 {
+    private static IHost _host;
+
     static async Task Main()
     {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        
+        _host = CreateHostBuilder().Build();
 
         var client = CreateHttpClient();
         IHtmlContentFetcher contentFetcher = new HtmlContentFetcher(client);
@@ -22,7 +30,7 @@ internal static class Program
             IPlaybillParser parser = new PlaybillParser();
             var parsedShows = parser.ParseShows(htmlContent);
 
-            IShowRepository showRepository = new ShowRepository();
+            var showRepository = _host.Services.GetService<IShowRepository>();
             var cancellationToken = new CancellationTokenSource().Token;
             // TODO не эффективно тянуть все записи из БД. Лучше в БД маленькую пачку и возвращать из них ту часть, которой нет в БД.
             var existingShows = await showRepository.GetAll(cancellationToken);
@@ -34,6 +42,25 @@ internal static class Program
             Console.WriteLine($"Ошибка: {e.Message}");
         }
     }
+    
+    private static IHostBuilder CreateHostBuilder() =>
+        Host.CreateDefaultBuilder()
+            .ConfigureAppConfiguration((context, config) =>
+            {
+                var env = context.HostingEnvironment;
+                config.SetBasePath(Directory.GetCurrentDirectory())
+                    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                    .AddUserSecrets<Program>(optional: true);
+            })
+            .ConfigureServices((context, services) =>
+            {
+                services.AddDbContext<BashOperaDbContext>(options => 
+                    options
+                        .UseNpgsql(context.Configuration.GetConnectionString("Postgres"))
+                        .UseSnakeCaseNamingConvention());
+                services.AddScoped<IPerformanceRepository, PerformanceRepository>();
+                services.AddScoped<IShowRepository, ShowRepository>();
+            });
 
     private static List<ShowDto> DetectNewShows(IReadOnlyCollection<ShowDto> parsedShows, IReadOnlyCollection<Show> existingShows)
     {
