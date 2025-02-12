@@ -29,7 +29,9 @@ internal class Program
         
         _host = CreateHostBuilder().Build();
 
-        var token = _host.Services.GetService<IConfiguration>()!["TelegramToken"] ?? throw new Exception("Токен не может быть пустым");
+        // var token = _host.Services.GetService<IConfiguration>()!["TelegramToken"] ?? throw new Exception("Токен не может быть пустым");
+        var token = Environment.GetEnvironmentVariable("TELEGRAM_TOKEN");
+        
         _botClient = new TelegramBotClient(token);
 
         _botClient.OnMessage += BotOnMessageReceived;
@@ -155,7 +157,8 @@ internal class Program
             {
                 config.SetBasePath(Directory.GetCurrentDirectory())
                     .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-                    .AddUserSecrets<Program>(optional: true);
+                    .AddUserSecrets<Program>(optional: true)
+                    .AddEnvironmentVariables();
             })
             .ConfigureServices((context, services) =>
             {
