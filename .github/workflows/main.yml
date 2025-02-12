@@ -15,8 +15,11 @@ jobs:
         echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
         ssh-keyscan -H ${{ secrets.SSH_HOST }} > ~/.ssh/known_hosts
 
-    - name: Check DNS resolution
-      run: nslookup ${{ secrets.SSH_HOST }}
+    # - name: Check DNS resolution
+    #   run: nslookup ${{ secrets.SSH_HOST }}
+
+    - name: Check SSH Host variable
+      run: echo "SSH_HOST is set to ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}"
 
     - name: connect and pull
       run: ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd ${{ secrets.WORK_DIR }} && git checkout ${{ secrets.MAIN_BRANCH }} && git pull && exit"
