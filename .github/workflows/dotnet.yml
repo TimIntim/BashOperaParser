@@ -24,20 +24,7 @@ jobs:
         run: dotnet build
       - run: ls -p ParserConsole
         
-#      - name: Upload artifact for deployment job
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: 'artifact'
-#          path: .net-app
-          
-  test:
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v4
-        with:
-          name: .net-app
-          
+#  TODO Хочется вынести это в отдельную джобу. 
+#  Но не понимаю, как шарить проект между джобами
       - name: Test with the dotnet CLI
         run: dotnet test
