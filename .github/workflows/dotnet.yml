@@ -19,6 +19,7 @@ jobs:
       - name: Build
         run: dotnet build      
   test:
+    runs-on: ubuntu-latest
     steps:
       - name: Test with the dotnet CLI
         run: dotnet test
