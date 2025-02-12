@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Collections.Concurrent;
+using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,46 +9,150 @@ using ParserConsole.Repositories;
 using ParserConsole.Services;
 using ParserConsole.Services.Interfaces;
 using Polly;
+using Telegram.Bot;
+using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
+
 
 namespace ParserConsole;
 
 internal class Program
 {
-    private static IHost _host;
+    private static IHost? _host;
+    
+    private static TelegramBotClient? _botClient;
+    private static ConcurrentDictionary<long, CancellationTokenSource> _ctsDictionaryForRunningTask = new();
 
-    static async Task Main()
+    static void Main()
     {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         
         _host = CreateHostBuilder().Build();
 
-        var client = CreateHttpClient();
-        IHtmlContentFetcher contentFetcher = new HtmlContentFetcher(client);
-        try
-        {
-            var htmlContent = await contentFetcher.GetHtmlContentAsync("https://www.bashopera.ru/affiche/");
+        var token = _host.Services.GetService<IConfiguration>()!["TelegramToken"] ?? throw new Exception("Токен не может быть пустым");
+        _botClient = new TelegramBotClient(token);
 
-            IPlaybillParser parser = new PlaybillParser();
-            var parsedShows = parser.ParseShows(htmlContent);
+        _botClient.OnMessage += BotOnMessageReceived;
 
-            var showRepository = _host.Services.GetService<IShowRepository>();
-            var cancellationToken = new CancellationTokenSource().Token;
-            // TODO не эффективно тянуть все записи из БД. Лучше в БД маленькую пачку и возвращать из них ту часть, которой нет в БД.
-            var existingShows = await showRepository.GetAll(cancellationToken);
-            var newShows = DetectNewShows(parsedShows, existingShows);
-            await showRepository.AddRange(newShows, cancellationToken);
-        }
-        catch (Exception e)
+        while (true)
         {
-            Console.WriteLine($"Ошибка: {e.Message}");
+            
         }
     }
-    
+
+    private static async Task BotOnMessageReceived(Message message, UpdateType type)
+    {
+        switch (message.Text)
+        {
+            case "/forceupdate":
+            {
+                var newShows = await GetNewShows();
+                var answer = newShows.Any()
+                    ? "Появились новые спектакли:\n" + string.Join('\n', newShows.Select((x, index) => $"{index + 1}. {x}"))
+                    : "Новых спектаклей в БашОпере - нет :C";
+
+                await _botClient!.SendMessage(message.Chat.Id, answer);
+                await SaveNewShows(newShows);
+            }
+
+                break;
+            
+            case "/start":
+                
+                var cts = new CancellationTokenSource();
+                var notRunning = _ctsDictionaryForRunningTask.TryAdd(message.Chat.Id, cts);
+
+                if (notRunning)
+                {
+                    await _botClient!.SendMessage(message.Chat.Id, "Ну все, иду <s>сталкерить</s> следить за премьерами БашОперы", parseMode: ParseMode.Html);
+                    
+                    // отправим сначала текущую афишу для пользователя - чтобы он знал, что уже там есть.
+                    {
+                        var parsedShows =  await ParseShows();
+                        var answer = "На сегодня на афише БашОперы представлены следующие спектакли:\n" + string.Join('\n', parsedShows.Select((x, index) => $"{index + 1}. {x}"));
+                        await _botClient!.SendMessage(message.Chat.Id, answer);
+                    }
+                    
+                    Task.Run(async () =>
+                    {
+                        while (cts.IsCancellationRequested == false)
+                        { 
+                            var newShows = await GetNewShows();
+
+                            if (!newShows.Any())
+                                continue;
+
+                            var answer = "Появились новые спектакли:\n" + string.Join('\n', newShows.Select((x, index) => $"{index + 1}. {x}"));
+                            await _botClient!.SendMessage(message.Chat.Id, answer);
+                            await SaveNewShows(newShows);
+                            Thread.Sleep(1000);
+                        }
+                    });
+                }
+                else
+                {
+                    await _botClient!.SendMessage(message.Chat.Id, "Я уже слежу за афишей для тебя) Вернусь с обновлениям, как только они появятся");
+                }
+                
+                break;
+            
+            case "/stop":
+                var hasRunningTask = _ctsDictionaryForRunningTask.TryGetValue(message.Chat.Id, out var runningCts);
+
+                if (hasRunningTask)
+                {
+                    runningCts!.Cancel();
+                    _ctsDictionaryForRunningTask.Remove(message.Chat.Id, out var _);
+                    await _botClient!.SendMessage(message.Chat.Id, "Ну вот, отписался :c\nТеперь точно пропустишь премьеру Щелкунчика...");
+                }
+                else
+                {
+                    await _botClient!.SendMessage(message.Chat.Id, "Чел, ты даже еще не подписывался. От чего ты отписаться думал? ))");
+                }
+                
+                break;
+            default:
+                await _botClient!.SendMessage(message.Chat.Id, "Я тебя не понимать... Выбери какую-либо команду");
+                break;
+        }
+    }
+
+    private static async Task SaveNewShows(List<ShowDto> newShows)
+    {
+        using var scope = _host!.Services.CreateScope();
+        var showRepository = scope.ServiceProvider.GetService<IShowRepository>();
+        var cancellationToken = new CancellationTokenSource().Token;
+        await showRepository!.AddRange(newShows, cancellationToken);
+    }
+
+    private static async Task<List<ShowDto>> GetNewShows()
+    {
+        var parsedShows = await ParseShows();
+
+        using var scope = _host!.Services.CreateScope();
+        var showRepository = scope.ServiceProvider.GetService<IShowRepository>();
+        var cancellationToken = new CancellationTokenSource().Token;
+        // TODO не эффективно тянуть все записи из БД. Лучше в БД маленькую пачку и возвращать из них ту часть, которой нет в БД.
+        var existingShows = await showRepository!.GetAll(cancellationToken);
+        var newShows = DetectNewShows(parsedShows, existingShows);
+        return newShows;
+    }
+
+    private static async Task<IReadOnlyCollection<ShowDto>> ParseShows()
+    {
+        var client = CreateHttpClient();
+        IHtmlContentFetcher contentFetcher = new HtmlContentFetcher(client);
+        var htmlContent = await contentFetcher.GetHtmlContentAsync("https://www.bashopera.ru/affiche/");
+
+        IPlaybillParser parser = new PlaybillParser();
+        var parsedShows = parser.ParseShows(htmlContent);
+        return parsedShows;
+    }
+
     private static IHostBuilder CreateHostBuilder() =>
         Host.CreateDefaultBuilder()
-            .ConfigureAppConfiguration((context, config) =>
+            .ConfigureAppConfiguration((_, config) =>
             {
-                var env = context.HostingEnvironment;
                 config.SetBasePath(Directory.GetCurrentDirectory())
                     .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
                     .AddUserSecrets<Program>(optional: true);
@@ -58,8 +163,8 @@ internal class Program
                     options
                         .UseNpgsql(context.Configuration.GetConnectionString("Postgres"))
                         .UseSnakeCaseNamingConvention());
-                services.AddScoped<IPerformanceRepository, PerformanceRepository>();
-                services.AddScoped<IShowRepository, ShowRepository>();
+                services.AddTransient<IPerformanceRepository, PerformanceRepository>();
+                services.AddTransient<IShowRepository, ShowRepository>();
             });
 
     private static List<ShowDto> DetectNewShows(IReadOnlyCollection<ShowDto> parsedShows, IReadOnlyCollection<Show> existingShows)
