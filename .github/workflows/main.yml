@@ -23,7 +23,7 @@ jobs:
     #   run: nslookup ${{ secrets.SSH_HOST }}
 
     - name: Check SSH Host variable
-      run: ping -c 4 ${{ secrets.SSH_HOST }}
+      run: ping -c 4 195.133.64.232
 
     - name: connect and pull
       run: ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd ${{ secrets.WORK_DIR }} && git checkout ${{ secrets.MAIN_BRANCH }} && git pull && exit"
