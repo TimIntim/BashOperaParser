@@ -7,18 +7,18 @@ jobs:
 
     runs-on: ubuntu-latest
     steps:
-#      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         
       - name: Setup dotnet 9.x
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.x'
           
-#      - name: Display dotnet version
-#        run: dotnet --version
-#        
-#      - name: Install dependencies
-#        run: dotnet restore
+      - name: Display dotnet version
+        run: dotnet --version
+
+      - name: Install dependencies
+        run: dotnet restore
         
       - name: Build
         run: dotnet build
