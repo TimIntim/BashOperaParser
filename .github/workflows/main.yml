@@ -1,7 +1,3 @@
-env:
-  ACTIONS_RUNNER_DEBUG: true
-  ACTIONS_STEP_DEBUG: true
-
 on:
   push:
     branches:
@@ -19,14 +15,7 @@ jobs:
         echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
         ssh-keyscan -H ${{ secrets.SSH_HOST }} > ~/.ssh/known_hosts
 
-    # - name: Check DNS resolution
-    #   run: nslookup ${{ secrets.SSH_HOST }}
-
-    - name: Check SSH Host variable
-      run: ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no root@195.133.64.232 "exit"
-
     - name: connect and pull
-      # run: ssh root@195.133.64.232 "cd ${{ secrets.WORK_DIR }} && git checkout ${{ secrets.MAIN_BRANCH }} && git pull && exit"
-      run: ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd ${{ secrets.WORK_DIR }} && git checkout ${{ secrets.MAIN_BRANCH }} && git pull && exit"
+      run: ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd ${{ secrets.WORK_DIR }} && git checkout ${{ secrets.MAIN_BRANCH }} && git pull && cd ParserConsole && dotnet build && dotnet run && exit"
     - name: cleanup
       run: rm -rf ~/.ssh
