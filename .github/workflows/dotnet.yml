@@ -1,0 +1,30 @@
+name: Build and test
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        
+      - name: Setup dotnet 9.x
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.x'
+          
+      - name: Display dotnet version
+        run: dotnet --version
+
+      - name: Install dependencies
+        run: dotnet restore
+        
+      - name: Build
+        run: dotnet build
+      - run: ls -p ParserConsole
+        
+#  TODO Хочется вынести это в отдельную джобу. 
+#  Но не понимаю, как шарить проект между джобами
+      - name: Test with the dotnet CLI
+        run: dotnet test
