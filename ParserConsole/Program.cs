@@ -73,7 +73,7 @@ internal class Program
                         await _botClient!.SendMessage(message.Chat.Id, answer);
                     }
                     
-                    Task.Run(async () =>
+                    _ = Task.Run(async () =>
                     {
                         while (cts.IsCancellationRequested == false)
                         { 
