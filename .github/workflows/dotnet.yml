@@ -8,18 +8,34 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        
       - name: Setup dotnet 9.x
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.x'
+          
       - name: Display dotnet version
         run: dotnet --version
+        
       - name: Install dependencies
         run: dotnet restore
+        
       - name: Build
-        run: dotnet build      
+        run: dotnet build
+        
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v4
+        with:
+          name: 'artifact'
+          path: .net-app
+          
   test:
     runs-on: ubuntu-latest
     steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: .net-app
+          
       - name: Test with the dotnet CLI
         run: dotnet test
