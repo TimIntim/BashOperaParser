@@ -18,6 +18,7 @@
       
   parser-console:
     build:
+      context: .
       dockerfile: ./ParserConsole/Dockerfile
     container_name: parser-console
     depends_on:
