@@ -23,7 +23,7 @@ internal class Program
     private static TelegramBotClient? _botClient;
     private static ConcurrentDictionary<long, CancellationTokenSource> _ctsDictionaryForRunningTask = new();
 
-    static void Main()
+    private static void Main(string[] args)
     {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         
@@ -157,14 +157,15 @@ internal class Program
             {
                 config.SetBasePath(Directory.GetCurrentDirectory())
                     .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-                    .AddUserSecrets<Program>(optional: true)
+                    // .AddUserSecrets<Program>(optional: true)
                     .AddEnvironmentVariables();
             })
             .ConfigureServices((context, services) =>
             {
                 services.AddDbContext<BashOperaDbContext>(options => 
                     options
-                        .UseNpgsql(context.Configuration.GetConnectionString("Postgres"))
+                        // .UseNpgsql(context.Configuration.GetConnectionString("Postgres"))
+                        .UseNpgsql(Environment.GetEnvironmentVariable("CONNECTIONSTRINGS__POSTGRES"))
                         .UseSnakeCaseNamingConvention());
                 services.AddTransient<IPerformanceRepository, PerformanceRepository>();
                 services.AddTransient<IShowRepository, ShowRepository>();
