@@ -57,83 +57,92 @@ internal class Program
         switch (message.Text)
         {
             case "/start":
-                await _botClient!.SendMessage(message.Chat.Id, 
-@"Чем я могу вам помочь?) 
-Я могу вам прислать текущую афишу БашОперы или подписаться на обновления афишы.
+                await _botClient!.SendMessage(message.Chat.Id,
+                    """
+                    Чем я могу вам помочь?) 
+                    Я могу вам прислать текущую афишу БашОперы или подписаться на обновления афишы.
 
-/playbill - получить текущую афишу.
-/subscribe - подписаться на обновления афишы.
+                    /playbill - получить текущую афишу.
+                    /subscribe - подписаться на обновления афишы.
 
-Полный список команд можно получить через команду /help");
+                    Полный список команд можно получить через команду /help
+                    """);
                 break;
-            
-            case "/forceupdate":
-            {
-                var newShows = await GetNewShows();
-                var answer = newShows.Any()
-                    ? "Появились новые спектакли:\n" + string.Join('\n', newShows.Select((x, index) => $"{index + 1}. {x}"))
-                    : "Новых спектаклей в БашОпере - нет :C";
 
-                await _botClient!.SendMessage(message.Chat.Id, answer);
-                await SaveNewShows(newShows);
-            }
+            case "/forceupdate":
+                await TryExecute(async () =>
+                {
+                    var newShows = await GetNewShows();
+                    var answer = newShows.Any()
+                        ? "Появились новые спектакли:\n" + string.Join('\n', newShows.Select((x, index) => $"{index + 1}. {x}"))
+                        : "Новых спектаклей в БашОпере - нет :C";
+
+                    await _botClient!.SendMessage(message.Chat.Id, answer);
+                    await SaveNewShows(newShows);
+                }, message.Chat.Id);
 
                 break;
             
             case "/subscribe":
-                
-                var cts = new CancellationTokenSource();
-                var notRunning = _ctsDictionaryForRunningTask.TryAdd(message.Chat.Id, cts);
-
-                if (notRunning)
+                await TryExecute(async () =>
                 {
-                    await _botClient!.SendMessage(message.Chat.Id, "Ну все, иду <s>сталкерить</s> следить за премьерами БашОперы", parseMode: ParseMode.Html);
-                    
-                    // отправим сначала текущую афишу для пользователя - чтобы он знал, что уже там есть.
-                    {
-                        var parsedShows =  await ParseShows();
-                        var answer = "На сегодня на афише БашОперы представлены следующие спектакли:\n" + string.Join('\n', parsedShows.Select((x, index) => $"{index + 1}. {x}"));
-                        await _botClient!.SendMessage(message.Chat.Id, answer);
-                    }
-                    
-                    _ = Task.Run(async () =>
-                    {
-                        while (cts.IsCancellationRequested == false)
-                        { 
-                            var newShows = await GetNewShows();
+                    var cts = new CancellationTokenSource();
+                    var notRunning = _ctsDictionaryForRunningTask.TryAdd(message.Chat.Id, cts);
 
-                            if (!newShows.Any())
-                                continue;
-
-                            var answer = "Появились новые спектакли:\n" + string.Join('\n', newShows.Select((x, index) => $"{index + 1}. {x}"));
+                    if (notRunning)
+                    {
+                        await _botClient!.SendMessage(message.Chat.Id, "Ну все, иду <s>сталкерить</s> следить за премьерами БашОперы", parseMode: ParseMode.Html);
+                    
+                        // отправим сначала текущую афишу для пользователя - чтобы он знал, что уже там есть.
+                        {
+                            var parsedShows =  await ParseShows();
+                            var answer = "На сегодня на афише БашОперы представлены следующие спектакли:\n" + string.Join('\n', parsedShows.Select((x, index) => $"{index + 1}. {x}"));
                             await _botClient!.SendMessage(message.Chat.Id, answer);
-                            await SaveNewShows(newShows);
-                            Thread.Sleep(1000);
                         }
-                    });
-                }
-                else
-                {
-                    await _botClient!.SendMessage(message.Chat.Id, "Я уже слежу за афишей для тебя) Вернусь с обновлениям, как только они появятся");
-                }
+                    
+                        _ = Task.Run(async () =>
+                        {
+                            while (cts.IsCancellationRequested == false)
+                            { 
+                                var newShows = await GetNewShows();
+
+                                if (!newShows.Any())
+                                    continue;
+
+                                var answer = "Появились новые спектакли:\n" + string.Join('\n', newShows.Select((x, index) => $"{index + 1}. {x}"));
+                                await _botClient!.SendMessage(message.Chat.Id, answer);
+                                await SaveNewShows(newShows);
+                                Thread.Sleep(1000);
+                            }
+                        });
+                    }
+                    else
+                    {
+                        await _botClient!.SendMessage(message.Chat.Id, "Я уже слежу за афишей для тебя) Вернусь с обновлениям, как только они появятся");
+                    }
+                }, message.Chat.Id);
                 
                 break;
             
-            case "/stop":
-                var hasRunningTask = _ctsDictionaryForRunningTask.TryGetValue(message.Chat.Id, out var runningCts);
+            case "/unsubscribe":
+                await TryExecute(async () =>
+                {
+                    var hasRunningTask = _ctsDictionaryForRunningTask.TryGetValue(message.Chat.Id, out var runningCts);
 
-                if (hasRunningTask)
-                {
-                    runningCts!.Cancel();
-                    _ctsDictionaryForRunningTask.Remove(message.Chat.Id, out var _);
-                    await _botClient!.SendMessage(message.Chat.Id, "Ну вот, отписался :c\nТеперь точно пропустишь премьеру Щелкунчика...");
-                }
-                else
-                {
-                    await _botClient!.SendMessage(message.Chat.Id, "Чел, ты даже еще не подписывался. От чего ты отписаться думал? ))");
-                }
+                    if (hasRunningTask)
+                    {
+                        runningCts!.Cancel();
+                        _ctsDictionaryForRunningTask.Remove(message.Chat.Id, out var _);
+                        await _botClient!.SendMessage(message.Chat.Id, "Ну вот, отписался :c\nТеперь точно пропустишь премьеру Щелкунчика...");
+                    }
+                    else
+                    {
+                        await _botClient!.SendMessage(message.Chat.Id, "Чел, ты даже еще не подписывался. От чего ты отписаться думал? ))");
+                    }
+                }, message.Chat.Id);
                 
                 break;
+            
             default:
                 await _botClient!.SendMessage(message.Chat.Id, "Я тебя не понимать... Выбери какую-либо команду");
                 break;
@@ -243,5 +252,18 @@ internal class Program
         };
 
         return new HttpClient(resilienceHandler);
+    }
+
+    private static async Task TryExecute(Func<Task> action, long chatId)
+    {
+        try
+        {
+            await action();
+        }
+        catch (Exception ex)
+        {
+            await _botClient!.SendMessage(chatId, "Что-то пошло не так...");
+            Console.WriteLine(ex.Message);
+        }
     }
 }
