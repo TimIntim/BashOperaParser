@@ -23,28 +23,29 @@ internal class Program
     private static TelegramBotClient? _botClient;
     private static ConcurrentDictionary<long, CancellationTokenSource> _ctsDictionaryForRunningTask = new();
 
-    private static void Main(string[] args)
+    private static void Main()
     {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         
         _host = CreateHostBuilder().Build();
 
-        // var token = _host.Services.GetService<IConfiguration>()!["TelegramToken"] ?? throw new Exception("Токен не может быть пустым");
-        var token = Environment.GetEnvironmentVariable("TELEGRAM_TOKEN");
+        var token = Environment.GetEnvironmentVariable("TELEGRAM_TOKEN") ?? throw new InvalidOperationException("Токен телаграмм бота не задан.");
 
         try
         {
             _botClient = new TelegramBotClient(token);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
             
             Console.WriteLine("Telegram_Token: " + token);
+            Console.WriteLine(ex.Message);
             throw;
         }
 
         _botClient.OnMessage += BotOnMessageReceived;
 
+        // TODO жесткий костыль. При рефакторинге - убрать и сделать нормально. А пока без этого - программа завершается.
         while (true)
         {
             
@@ -55,6 +56,17 @@ internal class Program
     {
         switch (message.Text)
         {
+            case "/start":
+                await _botClient!.SendMessage(message.Chat.Id, 
+@"Чем я могу вам помочь?) 
+Я могу вам прислать текущую афишу БашОперы или подписаться на обновления афишы.
+
+/playbill - получить текущую афишу.
+/subscribe - подписаться на обновления афишы.
+
+Полный список команд можно получить через команду /help");
+                break;
+            
             case "/forceupdate":
             {
                 var newShows = await GetNewShows();
@@ -68,7 +80,7 @@ internal class Program
 
                 break;
             
-            case "/start":
+            case "/subscribe":
                 
                 var cts = new CancellationTokenSource();
                 var notRunning = _ctsDictionaryForRunningTask.TryAdd(message.Chat.Id, cts);
@@ -166,15 +178,14 @@ internal class Program
             {
                 config.SetBasePath(Directory.GetCurrentDirectory())
                     .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-                    // .AddUserSecrets<Program>(optional: true)
+                    .AddUserSecrets<Program>(optional: true)
                     .AddEnvironmentVariables();
             })
             .ConfigureServices((context, services) =>
             {
                 services.AddDbContext<BashOperaDbContext>(options => 
                     options
-                        // .UseNpgsql(context.Configuration.GetConnectionString("Postgres"))
-                        .UseNpgsql(Environment.GetEnvironmentVariable("CONNECTIONSTRINGS__POSTGRES"))
+                        .UseNpgsql(context.Configuration.GetConnectionString("Postgres"))
                         .UseSnakeCaseNamingConvention());
                 services.AddTransient<IPerformanceRepository, PerformanceRepository>();
                 services.AddTransient<IShowRepository, ShowRepository>();
