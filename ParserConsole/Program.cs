@@ -21,7 +21,8 @@ internal class Program
     private static IHost? _host;
     
     private static TelegramBotClient? _botClient;
-    private static ConcurrentDictionary<long, CancellationTokenSource> _ctsDictionaryForRunningTask = new();
+    private static readonly ConcurrentDictionary<long, CancellationTokenSource> _ctsDictionaryForRunningTask = new();
+    private static List<(Func<string, bool> Predicate, Func<Message, Task> Handler)> _messageHandlers;
 
     private static void Main()
     {
@@ -42,6 +43,15 @@ internal class Program
             Console.WriteLine(ex.Message);
             throw;
         }
+        
+        _messageHandlers = new List<(Func<string, bool>, Func<Message, Task>)>
+        {
+            (data => data.StartsWith("/start"), HandleStartCommand),
+            // (data => data.StartsWith("/allow"), HandleAllowTaggingCommand),
+            // (data => data.StartsWith("/forbid"), HandleForbidTaggingCommand),
+            // (data => data.StartsWith("/info"), HandleInfoPageCommand),
+            // (data => data.StartsWith("/all"), HandleTagAllAsync),
+        };
 
         _botClient.OnMessage += BotOnMessageReceived;
 
@@ -50,6 +60,23 @@ internal class Program
         {
             
         }
+    }
+
+    private static async Task HandleStartCommand(Message message)
+    {
+        await TryExecute(async () =>
+        {
+            await _botClient!.SendMessage(message.Chat.Id,
+                """
+                Чем я могу вам помочь?) 
+                Я могу вам прислать текущую афишу БашОперы или подписаться на обновления афишы.
+
+                /playbill - получить текущую афишу.
+                /subscribe - подписаться на обновления афишы.
+
+                Полный список команд можно получить через команду /help
+                """);
+        }, message.Chat.Id);
     }
 
     private static async Task BotOnMessageReceived(Message message, UpdateType type)
@@ -149,6 +176,8 @@ internal class Program
         }
     }
 
+    #region Работа со спектаклями
+
     private static async Task SaveNewShows(List<ShowDto> newShows)
     {
         using var scope = _host!.Services.CreateScope();
@@ -181,25 +210,6 @@ internal class Program
         return parsedShows;
     }
 
-    private static IHostBuilder CreateHostBuilder() =>
-        Host.CreateDefaultBuilder()
-            .ConfigureAppConfiguration((_, config) =>
-            {
-                config.SetBasePath(Directory.GetCurrentDirectory())
-                    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-                    .AddUserSecrets<Program>(optional: true)
-                    .AddEnvironmentVariables();
-            })
-            .ConfigureServices((context, services) =>
-            {
-                services.AddDbContext<BashOperaDbContext>(options => 
-                    options
-                        .UseNpgsql(context.Configuration.GetConnectionString("Postgres"))
-                        .UseSnakeCaseNamingConvention());
-                services.AddTransient<IPerformanceRepository, PerformanceRepository>();
-                services.AddTransient<IShowRepository, ShowRepository>();
-            });
-
     private static List<ShowDto> DetectNewShows(IReadOnlyCollection<ShowDto> parsedShows, IReadOnlyCollection<Show> existingShows)
     {
         /* TODO вообще в теории это не лучший способ определить новое шоу или нет
@@ -228,6 +238,42 @@ internal class Program
     {
         return existingShow => existingShow.Performance.Name == parsedShow.PerformanceDto.Name && existingShow.ShowTime == parsedShow.ShowTime;
     }
+    
+    private static async Task TryExecute(Func<Task> action, long chatId)
+    {
+        try
+        {
+            await action();
+        }
+        catch (Exception ex)
+        {
+            await _botClient!.SendMessage(chatId, "Что-то пошло не так...");
+            Console.WriteLine(ex.Message);
+        }
+    }
+
+    #endregion
+
+    #region Системные методы
+
+    private static IHostBuilder CreateHostBuilder() =>
+        Host.CreateDefaultBuilder()
+            .ConfigureAppConfiguration((_, config) =>
+            {
+                config.SetBasePath(Directory.GetCurrentDirectory())
+                    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                    .AddUserSecrets<Program>(optional: true)
+                    .AddEnvironmentVariables();
+            })
+            .ConfigureServices((context, services) =>
+            {
+                services.AddDbContext<BashOperaDbContext>(options => 
+                    options
+                        .UseNpgsql(context.Configuration.GetConnectionString("Postgres"))
+                        .UseSnakeCaseNamingConvention());
+                services.AddTransient<IPerformanceRepository, PerformanceRepository>();
+                services.AddTransient<IShowRepository, ShowRepository>();
+            });
 
     // TODO когда дойду до переделки проекта под нормальный с DI - лучше использовать IHttpClientFactory
     private static HttpClient CreateHttpClient()
@@ -254,16 +300,7 @@ internal class Program
         return new HttpClient(resilienceHandler);
     }
 
-    private static async Task TryExecute(Func<Task> action, long chatId)
-    {
-        try
-        {
-            await action();
-        }
-        catch (Exception ex)
-        {
-            await _botClient!.SendMessage(chatId, "Что-то пошло не так...");
-            Console.WriteLine(ex.Message);
-        }
-    }
+    #endregion
+
+    
 }
