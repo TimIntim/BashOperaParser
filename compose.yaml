@@ -1,6 +1,7 @@
 ﻿services:
   postgres:
     image: postgres:alpine
+    restart: always
     container_name: bash-opera-db
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
@@ -15,6 +16,20 @@
       retries: 5
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      
+  parser-console:
+    restart: always
+    build:
+      context: .
+      dockerfile: ./ParserConsole/Dockerfile
+    container_name: parser-console
+    depends_on:
+      - postgres
+    environment:
+      TELEGRAM_TOKEN: ${TELEGRAM_TOKEN}
+      CONNECTIONSTRINGS__POSTGRES: ${CONNECTIONSTRINGS__POSTGRES}
+    ports:
+      - "8090:8090"
         
 volumes:
   postgres_data:
