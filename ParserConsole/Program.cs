@@ -1,4 +1,17 @@
-﻿using System.Text;
+﻿using System.Collections.Concurrent;
+using System.Text;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Http.Resilience;
+using ParserConsole.Repositories;
+using ParserConsole.Services;
+using ParserConsole.Services.Interfaces;
+using Polly;
+using Telegram.Bot;
+using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 
 
 namespace ParserConsole;
