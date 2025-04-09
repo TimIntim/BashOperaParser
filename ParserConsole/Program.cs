@@ -29,7 +29,10 @@ internal class Program
         
         _host = CreateHostBuilder().Build();
 
-        var token = Environment.GetEnvironmentVariable("TELEGRAM_TOKEN") ?? throw new InvalidOperationException("Токен телаграмм бота не задан.");
+        var configuration = _host.Services.GetRequiredService<IConfiguration>();
+        var token = configuration["TelegramToken"]
+                    ?? Environment.GetEnvironmentVariable("TELEGRAM_TOKEN")
+                    ?? throw new InvalidOperationException("Токен телеграм бота не найден ни в конфигурации, ни в переменных окружения.");
 
         try
         {
@@ -77,7 +80,10 @@ internal class Program
                         ? "Появились новые спектакли:\n" + string.Join('\n', newShows.Select((x, index) => $"{index + 1}. {x}"))
                         : "Новых спектаклей в БашОпере - нет :C";
 
-                    await _botClient!.SendMessage(message.Chat.Id, answer);
+                    foreach (var chunk in SplitMessageIntoChunks(answer))
+                    {
+                        await _botClient!.SendMessage(message.Chat.Id, chunk);
+                    }
                     await SaveNewShows(newShows);
                 }, message.Chat.Id);
 
@@ -97,7 +103,11 @@ internal class Program
                         {
                             var parsedShows =  await ParseShows();
                             var answer = "На сегодня на афише БашОперы представлены следующие спектакли:\n" + string.Join('\n', parsedShows.Select((x, index) => $"{index + 1}. {x}"));
-                            await _botClient!.SendMessage(message.Chat.Id, answer);
+                            
+                            foreach (var chunk in SplitMessageIntoChunks(answer))
+                            {
+                                await _botClient!.SendMessage(message.Chat.Id, chunk);
+                            }
                         }
                     
                         _ = Task.Run(async () =>
@@ -110,7 +120,10 @@ internal class Program
                                     continue;
 
                                 var answer = "Появились новые спектакли:\n" + string.Join('\n', newShows.Select((x, index) => $"{index + 1}. {x}"));
-                                await _botClient!.SendMessage(message.Chat.Id, answer);
+                                foreach (var chunk in SplitMessageIntoChunks(answer))
+                                {
+                                    await _botClient!.SendMessage(message.Chat.Id, chunk);
+                                }
                                 await SaveNewShows(newShows);
                                 Thread.Sleep(1000);
                             }
@@ -264,6 +277,36 @@ internal class Program
         {
             await _botClient!.SendMessage(chatId, "Что-то пошло не так...");
             Console.WriteLine(ex.Message);
+        }
+    }
+
+    private static IEnumerable<string> SplitMessageIntoChunks(string message, int maxChunkSize = 4096)
+    {
+        if (message.Length <= maxChunkSize)
+        {
+            yield return message;
+            yield break;
+        }
+
+        var lines = message.Split('\n');
+        var currentChunk = new StringBuilder();
+        var header = lines[0];
+
+        for (int i = 1; i < lines.Length; i++)
+        {
+            var line = lines[i];
+            if (currentChunk.Length + line.Length + 1 > maxChunkSize)
+            {
+                yield return currentChunk.ToString();
+                currentChunk.Clear();
+                currentChunk.AppendLine(header); 
+            }
+            currentChunk.AppendLine(line);
+        }
+
+        if (currentChunk.Length > 0)
+        {
+            yield return currentChunk.ToString();
         }
     }
 }

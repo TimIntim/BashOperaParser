@@ -6,3 +6,4 @@ riderModule.iml
 /.idea
 BashOperaParser.sln.DotSettings.user
 .env
+/.vscode/*
